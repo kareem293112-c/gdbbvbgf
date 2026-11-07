@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'karmo2931@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+          
+          false
+        ))
+      );
+    }
+
+    // Catch-all deny (fallback)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // System configuration and counters
+    match /system/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Global settings and custom badges
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if true;
+      
+      // Moments sub-collection
+      match /moments/{momentId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+
+      // Visitors sub-collection
+      match /visitors/{visitorId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+
+    // Voice Rooms
+    match /voice_rooms/{roomId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if true;
+      
+      // Participants sub-collection
+      match /participants/{userId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+      
+      // Mic seats sub-collection
+      match /mic_seats/{seatId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+
+      // Chat messages sub-collection
+      match /chat_messages/{msgId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+
+      // Mic invitations sub-collection
+      match /mic_invitations/{inviteId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+
+    // Clans
+    match /clans/{clanId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+      allow delete: if true;
+    }
+
+    // Agents Hub
+    match /agents_hub/{agentId} {
+      allow read: if true;
+      allow create, update, write: if isSignedIn();
+    }
+
+    // Agent Transfer Logs
+    match /agent_transfer_logs/{logId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+    }
+
+    // Agent Coin Transfers
+    match /agent_coin_transfers/{transferId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+    }
+
+    // Cashout Requests
+    match /cashout_requests/{requestId} {
+      allow read: if true;
+      allow create, update: if isSignedIn();
+    }
+
+    // Withdrawal Requests (Host Salaries)
+    match /withdrawal_requests/{requestId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+
+    // Agencies
+    match /agencies/{agencyId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Agency Invitations
+    match /agency_invitations/{invitationId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Gifts & Logs
+    match /gifts/{giftId} {
+      allow read: if true;
+    }
+    match /gift_logs/{logId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+    }
+    
+    // Messages
+    match /messages/{msgId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Community Posts
+    match /community_posts/{postId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Direct Calls
+    match /calls/{callId} {
+      allow read: if isSignedIn() && (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid || resource.data == null);
+      allow create: if isSignedIn() && request.resource.data.callerId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.callerId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+
+      match /messages/{msgId} {
+        allow read, write: if isSignedIn();
+      }
+
+      match /candidates/{candidateId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Matching Queue
+    match /matching_queue/{userId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Support Tickets
+    match /support_tickets/{ticketId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+      
+      match /messages/{msgId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
+    }
+  }
+}
